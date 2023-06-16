@@ -1,5 +1,7 @@
 # matrix fee estimator
 
+inspired by https://bitcoindevkit.org/blog/2021/01/fee-estimation-for-light-clients-part-1/
+
 ## how does this work?
 there are two parts to matrix. the logger and the model.
 
