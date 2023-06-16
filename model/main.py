@@ -25,13 +25,13 @@ from sklearn.preprocessing import MinMaxScaler
 dotenv_file = find_dotenv(usecwd=True)
 load_dotenv(dotenv_file)
 print(f"Env file loaded {dotenv_file}")
-print(os.getenv("RPC_USER"))
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 rpc_user = os.getenv("RPC_USER")
 rpc_password = os.getenv("RPC_PASSWORD")
 rpc_port = os.getenv("RPC_PORT")
 model_path = os.getenv("MODEL_PATH")
 prediction_path = os.getenv("PREDICTION_PATH")
+print("All env vars loaded")
 
 def get_current_block_hash():
     rpc_connection = AuthServiceProxy(f"http://{rpc_user}:{rpc_password}@10.21.21.8:{rpc_port}")
@@ -77,6 +77,7 @@ def job():
     # Existing model: load
     model_usable = True
     if os.path.exists(model_path):
+        print("Loading existing model from disk")
         model = load_model(model_path)
     # TODO: model evaluation pre-load
     if not model_usable:

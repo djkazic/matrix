@@ -1,4 +1,5 @@
 model/.env
 model/training_data.csv
+model/venv
 logger/.env
 logger/training_data.csv
