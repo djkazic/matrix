@@ -1,0 +1,5 @@
+RPC_USER=bitcoin
+RPC_PASSWORD=foobar
+RPC_PORT=8332
+MODEL_PATH=/home/bitcoin/matrix/model
+PREDICTION_PATH=/home/bitcoin/matrix/prediction.json

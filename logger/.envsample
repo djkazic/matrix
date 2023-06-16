@@ -1,0 +1,5 @@
+RPC_URI=10.21.21.8:8332
+RPC_USER=umbrel
+RPC_PASSWORD=foobar
+ZMQ_TX=tcp://localhost:28333
+ZMQ_BLOCK=tcp://localhost:28332
