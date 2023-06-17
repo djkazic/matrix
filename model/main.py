@@ -26,6 +26,7 @@ dotenv_file = find_dotenv(usecwd=True)
 load_dotenv(dotenv_file)
 print(f"Env file loaded {dotenv_file}")
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+rpc_host = os.getenv("RPC_HOST")
 rpc_user = os.getenv("RPC_USER")
 rpc_password = os.getenv("RPC_PASSWORD")
 rpc_port = os.getenv("RPC_PORT")
@@ -34,11 +35,11 @@ prediction_path = os.getenv("PREDICTION_PATH")
 print("All env vars loaded")
 
 def get_current_block_hash():
-    rpc_connection = AuthServiceProxy(f"http://{rpc_user}:{rpc_password}@10.21.21.8:{rpc_port}")
+    rpc_connection = AuthServiceProxy(f"http://{rpc_user}:{rpc_password}@{rpc_host}:{rpc_port}")
     return rpc_connection.getbestblockhash()
 
 def calculate_purge_fee_rate():
-    rpc_connection = AuthServiceProxy(f"http://{rpc_user}:{rpc_password}@10.21.21.8:{rpc_port}")
+    rpc_connection = AuthServiceProxy(f"http://{rpc_user}:{rpc_password}@{rpc_host}:{rpc_port}")
     mempool_info = rpc_connection.getmempoolinfo()
     mempool_size_bytes = mempool_info["bytes"]
     mempool_transactions = mempool_info["size"]
@@ -85,7 +86,7 @@ def job():
         # Now you can use X_train, y_train, X_test, and y_test to train and test your Keras model
         # Define the model
         model = Sequential([
-            Dense(32, input_shape=(3,), activation=LeakyReLU(alpha=0.05)),
+            Dense(64, input_shape=(3,), activation=LeakyReLU(alpha=0.05)),
             Dense(32, activation=LeakyReLU(alpha=0.05)),
             Dense(16, activation=LeakyReLU(alpha=0.05)),
             Dense(1, activation=LeakyReLU(alpha=0.05))
