@@ -75,7 +75,7 @@ def job():
     y_test_scaled = y_scaler.transform(y_test.values.reshape(-1, 1))
     X_train, X_test, y_train, y_test = X_train_scaled, X_test_scaled, y_train_scaled, y_test_scaled
     # Existing model: load
-    model_usable = True
+    model_usable = False
     if os.path.exists(model_path):
         print("Loading existing model from disk")
         model = load_model(model_path)
