@@ -80,30 +80,39 @@ def job():
     if os.path.exists(model_path):
         print("Loading existing model from disk")
         model = load_model(model_path)
+        model_usable = True
     # TODO: model evaluation pre-load
     if not model_usable:
         print(f"No suitable model found... Training new model.")
         # Now you can use X_train, y_train, X_test, and y_test to train and test your Keras model
         # Define the model
+        initial_learning_rate = 0.005
+        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+            initial_learning_rate,
+            decay_steps=10000,
+            decay_rate=0.96,
+            staircase=True)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
         model = Sequential([
             Dense(64, input_shape=(3,), activation=LeakyReLU(alpha=0.05)),
+            Dropout(0.5),
             Dense(32, activation=LeakyReLU(alpha=0.05)),
+            Dropout(0.5),
             Dense(16, activation=LeakyReLU(alpha=0.05)),
             Dense(1, activation=LeakyReLU(alpha=0.05))
         ])
 
         # Compile the model
-        model.compile(optimizer=Adam(0.001), loss='mse', metrics=['mae', 'mse'])
-        early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=21, restore_best_weights=True)
-
-        # Train the model
-        history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=15, shuffle=True, callbacks=[early_stop], batch_size=32)
-        print(model.summary())
-        validation_loss_threshold = 4.4e-05
-        validation_loss = model.history.history['val_loss'][-1]
-        if validation_loss > validation_loss_threshold:
-            print("Model did not meet validation_loss requirements. Aborting")
-            return
+        model.compile(optimizer=optimizer, loss='mse', metrics=['mae', 'mse'])
+    early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=12, restore_best_weights=True)
+    # Train the model
+    history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=15, shuffle=True, callbacks=[early_stop], batch_size=64)
+    print(model.summary())
+    validation_loss_threshold = 8.6e-05
+    validation_loss = model.history.history['val_loss'][-1]
+    if validation_loss > validation_loss_threshold:
+        print(f"Model did not meet validation_loss requirements. Expected < {validation_loss_threshold}, actual {validation_loss} Aborting")
+        return
     # Eval
     current_day = datetime.now().weekday()
     current_hour = datetime.now().hour
@@ -156,10 +165,10 @@ def job():
         json.dump(output, f, indent=2)
     print(output)
     model.save(model_path)
-    K.clear_session()
-    gc.collect()
-    del model
-    print("Done cleaning up!")
+    #K.clear_session()
+    #gc.collect()
+    #del model
+    print("Saved model to disk!")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
