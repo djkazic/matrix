@@ -52,7 +52,7 @@ def calculate_purge_fee_rate():
 
 def job():
     # Calculate purge_fee_rate
-    purge_fee_rate = calculate_purge_fee_rate() * 1.85
+    purge_fee_rate = calculate_purge_fee_rate() * 1.9
     print(f"Purge feeRate (thousands) = {purge_fee_rate}, setting floor")
     # Load the CSV
     df = pd.read_csv('training_data.csv', names=['date', 'block_diff', 'fee_rate'])
