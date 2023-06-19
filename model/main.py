@@ -52,7 +52,7 @@ def calculate_purge_fee_rate():
 
 def job():
     # Calculate purge_fee_rate
-    purge_fee_rate = calculate_purge_fee_rate() * 1.75
+    purge_fee_rate = calculate_purge_fee_rate() * 1.85
     print(f"Purge feeRate (thousands) = {purge_fee_rate}, setting floor")
     # Load the CSV
     df = pd.read_csv('training_data.csv', names=['date', 'block_diff', 'fee_rate'])
@@ -86,29 +86,27 @@ def job():
         print(f"No suitable model found... Training new model.")
         # Now you can use X_train, y_train, X_test, and y_test to train and test your Keras model
         # Define the model
-        initial_learning_rate = 0.005
-        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
-            initial_learning_rate,
-            decay_steps=10000,
-            decay_rate=0.96,
-            staircase=True)
-        optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
+        #initial_learning_rate = 0.009
+        #lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+        #    initial_learning_rate,
+        #    decay_steps=15000,
+        #    decay_rate=0.96,
+        #    staircase=True)
+        optimizer = tf.keras.optimizers.Adam(0.0035)
         model = Sequential([
-            Dense(64, input_shape=(3,), activation=LeakyReLU(alpha=0.05)),
-            Dropout(0.5),
+            Dense(128, input_shape=(3,), activation=LeakyReLU(alpha=0.05)),
+            Dense(64, activation=LeakyReLU(alpha=0.05)),
             Dense(32, activation=LeakyReLU(alpha=0.05)),
-            Dropout(0.5),
-            Dense(16, activation=LeakyReLU(alpha=0.05)),
             Dense(1, activation=LeakyReLU(alpha=0.05))
         ])
 
         # Compile the model
         model.compile(optimizer=optimizer, loss='mse', metrics=['mae', 'mse'])
-    early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=12, restore_best_weights=True)
+    early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=14, restore_best_weights=True)
     # Train the model
-    history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=15, shuffle=True, callbacks=[early_stop], batch_size=64)
+    history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=18, shuffle=True, callbacks=[early_stop], batch_size=256)
     print(model.summary())
-    validation_loss_threshold = 8.6e-05
+    validation_loss_threshold = 6.5e-05
     validation_loss = model.history.history['val_loss'][-1]
     if validation_loss > validation_loss_threshold:
         print(f"Model did not meet validation_loss requirements. Expected < {validation_loss_threshold}, actual {validation_loss} Aborting")
@@ -143,17 +141,19 @@ def job():
         predicted_fee_rate = int(predicted_fee_rate * 1000)
         if target > 2:
             # Check prev value > curr value
-            predicted_fee_rate = min(predicted_fee_rate, int(fee_by_block_target[str(target - 1)]))
+            predicted_fee_rate = min(predicted_fee_rate, int(fee_by_block_target[str(target - 1)]) * 0.9)
         if target >= 3 and target < 16:
             # Predicted fee_rate should be either the prediction or the prior target * 0.85
             predicted_fee_rate = max(predicted_fee_rate, int(fee_by_block_target[str(target - 1)] * 0.85))
         elif target >= 16:
             # prediction or prior target * 0.8
             predicted_fee_rate = max(predicted_fee_rate, int(fee_by_block_target[str(target - 1)] * 0.8))
-        if target <= 72:
-            predicted_fee_rate = max(predicted_fee_rate, int(purge_fee_rate * 2))
+        #if target <= 72:
+        #    predicted_fee_rate = max(predicted_fee_rate, int(purge_fee_rate * 2))
         else:
             predicted_fee_rate = max(predicted_fee_rate, int(purge_fee_rate))
+        predicted_fee_rate = max(predicted_fee_rate, int(purge_fee_rate))
+        predicted_fee_rate = int(predicted_fee_rate)
         fee_by_block_target[str(target)] = predicted_fee_rate
         print(f"{target} target feeRate (thousands) = {predicted_fee_rate}")
 
@@ -165,9 +165,6 @@ def job():
         json.dump(output, f, indent=2)
     print(output)
     model.save(model_path)
-    #K.clear_session()
-    #gc.collect()
-    #del model
     print("Saved model to disk!")
 
 if __name__ == "__main__":

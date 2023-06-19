@@ -157,9 +157,10 @@ func processBlock(client *rpcclient.Client, block *btcutil.Block) {
 		if isCPFP {
 			cpfpTxs[txHash] = tx.MsgTx()
 		}
-		mutex.RLock()
+		mutex.Lock()
 		txData, exists := txHeightMap[txHash]
-		mutex.RUnlock()
+                // todo: delete map entrt
+		mutex.Unlock()
 		if exists {
 			blockHeightDiff := blockHeight - txData.Height
 			if blockHeightDiff < 0 {
@@ -169,7 +170,7 @@ func processBlock(client *rpcclient.Client, block *btcutil.Block) {
 				fmt.Printf("Transaction %s confirmed at block height %d feerate %f (blockHeight Difference: %d)\n", txHash, blockHeight, txData.FeeRate, blockHeightDiff)
 			}
 			packageFeeRate := calculatePackageFeeRate(client, tx, cpfpTxs)
-			if blockHeightDiff >= 0 {
+			if blockHeightDiff > 0 {
 				err = writeToCSV(txHash, txData.Time, blockHeightDiff, packageFeeRate)
 				if err != nil {
 					log.Fatal(err)
