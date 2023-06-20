@@ -66,7 +66,7 @@ def job():
     X_columns = ['day_of_week', 'hour_of_day', 'block_diff']
     y = df['fee_rate']
     # Split data into training and testing datasets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
     # Scale the data
     scaler = MinMaxScaler()
     X_train_scaled = scaler.fit_transform(X_train.values)
@@ -95,8 +95,10 @@ def job():
         optimizer = tf.keras.optimizers.Adam(0.0035)
         model = Sequential([
             Dense(128, input_shape=(3,), activation=LeakyReLU(alpha=0.05)),
+            Dropout(0.2),
             Dense(64, activation=LeakyReLU(alpha=0.05)),
             Dense(32, activation=LeakyReLU(alpha=0.05)),
+            #Dropout(0.2),
             Dense(1, activation=LeakyReLU(alpha=0.05))
         ])
 
@@ -106,10 +108,11 @@ def job():
     # Train the model
     history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=18, shuffle=True, callbacks=[early_stop], batch_size=256)
     print(model.summary())
-    validation_loss_threshold = 6.5e-05
-    validation_loss = model.history.history['val_loss'][-1]
+    validation_loss_threshold = 3.0e-05
+    validation_loss = min(model.history.history['val_loss'])
     if validation_loss > validation_loss_threshold:
         print(f"Model did not meet validation_loss requirements. Expected < {validation_loss_threshold}, actual {validation_loss} Aborting")
+        job()
         return
     # Eval
     current_day = datetime.now().weekday()
