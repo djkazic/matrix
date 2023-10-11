@@ -15,8 +15,8 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/rpcclient"
-	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 	"github.com/joho/godotenv"
 	zmq "github.com/pebbe/zmq4"
 )
@@ -38,7 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-    file, err := os.OpenFile("training_data.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile("training_data.csv", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("Error opening CSV file: %v", err)
 	}
@@ -104,15 +104,15 @@ func listen(address, subTopic string) error {
 				_, feeRate, err := getTransactionDetails(rpcClient, txHex)
 				if feeRate < 0 {
 					//log.Printf("Skipping transaction %s invalid feeRate", msgTx.TxHash())
-                    continue
+					continue
 				}
 				if err != nil {
 					log.Fatalf("Error getting transaction %s vsize: %v", msgTx.TxHash(), err)
 				}
 				mutex.Lock()
 				txHeightMap[msgTx.TxHash().String()] = TxData{
-					Height: getBestChainHeight(rpcClient),
-					Time: time.Now(),
+					Height:  getBestChainHeight(rpcClient),
+					Time:    time.Now(),
 					FeeRate: feeRate,
 				}
 				mutex.Unlock()
@@ -147,36 +147,41 @@ func processBlock(client *rpcclient.Client, block *btcutil.Block) {
 	}
 	blockHeight := int32(blockInfo.Height)
 	cpfpTxs := make(map[string]*wire.MsgTx)
-	// Iterate through the transactions in the block
-	for _, tx := range block.Transactions() {
-		txHash := tx.Hash().String()
-		isCPFP, err := isCPFPTransaction(client, tx)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if isCPFP {
-			cpfpTxs[txHash] = tx.MsgTx()
-		}
-		mutex.Lock()
-		txData, exists := txHeightMap[txHash]
-                // todo: delete map entrt
-		mutex.Unlock()
-		if exists {
-			blockHeightDiff := blockHeight - txData.Height
-			if blockHeightDiff < 0 {
-				blockHeightDiff = 0
+	if blockInfo.Confirmations > 0 {
+		for _, tx := range block.Transactions() {
+			txHash := tx.Hash().String()
+			isCPFP, err := isCPFPTransaction(client, tx)
+			if err != nil {
+				log.Fatal(err)
 			}
 			if isCPFP {
-				fmt.Printf("Transaction %s confirmed at block height %d feerate %f (blockHeight Difference: %d)\n", txHash, blockHeight, txData.FeeRate, blockHeightDiff)
+				cpfpTxs[txHash] = tx.MsgTx()
 			}
-			packageFeeRate := calculatePackageFeeRate(client, tx, cpfpTxs)
-			if blockHeightDiff > 0 {
-				err = writeToCSV(txHash, txData.Time, blockHeightDiff, packageFeeRate)
-				if err != nil {
-					log.Fatal(err)
+			mutex.Lock()
+			txData, exists := txHeightMap[txHash]
+			if exists {
+				delete(txHeightMap, txHash)
+			}
+			mutex.Unlock()
+			if exists {
+				blockHeightDiff := blockHeight - txData.Height
+				if blockHeightDiff < 0 {
+					blockHeightDiff = 0
+				}
+				if isCPFP {
+					fmt.Printf("Transaction %s confirmed at block height %d feerate %f (blockHeight Difference: %d)\n", txHash, blockHeight, txData.FeeRate, blockHeightDiff)
+				}
+				packageFeeRate := calculatePackageFeeRate(client, tx, cpfpTxs)
+				if blockHeightDiff > 0 {
+					err = writeToCSV(txHash, txData.Time, blockHeightDiff, packageFeeRate)
+					if err != nil {
+						log.Fatal(err)
+					}
 				}
 			}
 		}
+	} else {
+		log.Printf("Block %s is not part of the main chain", blockHash)
 	}
 }
 
